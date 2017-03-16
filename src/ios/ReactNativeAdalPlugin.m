@@ -1,62 +1,73 @@
 /*******************************************************************************
+ * Copyright (c) Northwestern Mutual
+ * All Rights Reserved
+ * Licensed under the Apache License, Version 2.0.
+ * See License.txt in the project root for license information.
+ ******************************************************************************/
+
+/*******************************************************************************
  * Copyright (c) Microsoft Open Technologies, Inc.
  * All Rights Reserved
  * See License in the project root for license information.
  ******************************************************************************/
 
-#import "CordovaAdalPlugin.h"
-#import "CordovaAdalUtils.h"
+
+#import "ReactNativeAdalPlugin.h"
+#import "ReactNativeAdalUtils.h"
+#import <React/RCTLog.h>
+#import <React/RCTConvert.h>
 
 #import <ADAL/ADAL.h>
 
-@implementation CordovaAdalPlugin
+@implementation ReactNativeAdalPlugin
 
-- (void)createAsync:(CDVInvokedUrlCommand *)command
+RCT_EXPORT_MODULE();
+
+
+RCT_EXPORT_METHOD(createAsync:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
-            NSString *authority = ObjectOrNil([command.arguments objectAtIndex:0]);
-            BOOL validateAuthority = [[command.arguments objectAtIndex:1] boolValue];
+            NSString *authority = [obj objectForKey:@"authority"] ? [RCTConvert NSString:obj[@"authority"]] : nil;
+            BOOL validateAuthority = [obj objectForKey:@"validateAuthority"] ? [RCTConvert BOOL:obj[@"validateAuthority"]] : false;
 
-            [CordovaAdalPlugin getOrCreateAuthContext:authority
+            [ReactNativeAdalPlugin getOrCreateAuthContext:authority
                                     validateAuthority:validateAuthority];
 
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            callback(@[[NSNull null]]);
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+            callback(@[dict, [NSNull null]]);
         }
-    }];
 }
 
-- (void)acquireTokenAsync:(CDVInvokedUrlCommand *)command
+
+RCT_EXPORT_METHOD(acquireTokenAsync:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
-            NSString *authority = ObjectOrNil([command.arguments objectAtIndex:0]);
-            BOOL validateAuthority = [[command.arguments objectAtIndex:1] boolValue];
-            NSString *resourceId = ObjectOrNil([command.arguments objectAtIndex:2]);
-            NSString *clientId = ObjectOrNil([command.arguments objectAtIndex:3]);
-            NSURL *redirectUri = [NSURL URLWithString:[command.arguments objectAtIndex:4]];
-            NSString *userId = ObjectOrNil([command.arguments objectAtIndex:5]);
-            NSString *extraQueryParameters = ObjectOrNil([command.arguments objectAtIndex:6]);
 
-            ADAuthenticationContext *authContext = [CordovaAdalPlugin getOrCreateAuthContext:authority
+            NSString *authority = [obj objectForKey:@"authority"] ? [RCTConvert NSString:obj[@"authority"]] : nil;
+            NSString *resourceId = [obj objectForKey:@"resourceId"] ? [RCTConvert NSString:obj[@"resourceId"]] : nil;
+            NSString *clientId = [obj objectForKey:@"clientId"] ? [RCTConvert NSString:obj[@"clientId"]] : nil;
+            NSURL *redirectUri = [obj objectForKey:@"redirectUri"] ? [RCTConvert NSURL:obj[@"redirectUri"]] : nil;
+            NSString *userId = [obj objectForKey:@"userId"] ? [RCTConvert NSString:obj[@"userId"]] : nil;
+            NSString *extraQueryParameters =[obj objectForKey:@"extraQueryParameters"] ? [RCTConvert NSString:obj[@"extraQueryParameters"]] : nil;
+            BOOL validateAuthority = [obj objectForKey:@"validateAuthority"] ? [RCTConvert BOOL:obj[@"validateAuthority"]] : false;
+
+
+            ADAuthenticationContext *authContext = [ReactNativeAdalPlugin getOrCreateAuthContext:authority
                                                                            validateAuthority:validateAuthority];
+            //
             // `x-msauth-` redirect url prefix means we should use brokered authentication
             // https://github.com/AzureAD/azure-activedirectory-library-for-objc#brokered-authentication
             authContext.credentialsType = (redirectUri.scheme && [redirectUri.scheme hasPrefix: @"x-msauth-"]) ?
                 AD_CREDENTIALS_AUTO : AD_CREDENTIALS_EMBEDDED;
 
             // TODO iOS sdk requires user name instead of guid so we should map provided id to a known user name
-            userId = [CordovaAdalUtils mapUserIdToUserName:authContext
+            userId = [ReactNativeAdalUtils mapUserIdToUserName:authContext
                                                     userId:userId];
             dispatch_async(dispatch_get_main_queue(), ^{
                 [authContext
@@ -68,38 +79,43 @@
                  extraQueryParameters:extraQueryParameters
                  completionBlock:^(ADAuthenticationResult *result) {
 
-                     NSMutableDictionary *msg = [CordovaAdalUtils ADAuthenticationResultToDictionary: result];
-                     CDVCommandStatus status = (AD_SUCCEEDED != result.status) ? CDVCommandStatus_ERROR : CDVCommandStatus_OK;
-                     CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:status messageAsDictionary: msg];
-                     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                   NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationResultToDictionary:result];
+                   if (AD_SUCCEEDED != result.status){
+                     callback(@[dict, [NSNull null]]);
+                   }
+                   else{
+                     callback(@[[NSNull null], dict]);
+                   }
+
                  }];
             });
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+            callback(@[dict, [NSNull null]]);
         }
-    }];
 }
 
-- (void)acquireTokenSilentAsync:(CDVInvokedUrlCommand *)command
+RCT_EXPORT_METHOD(acquireTokenSilentAsync:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
-            NSString *authority = ObjectOrNil([command.arguments objectAtIndex:0]);
-            BOOL validateAuthority = [[command.arguments objectAtIndex:1] boolValue];
-            NSString *resourceId = ObjectOrNil([command.arguments objectAtIndex:2]);
-            NSString *clientId = ObjectOrNil([command.arguments objectAtIndex:3]);
-            NSString *userId = ObjectOrNil([command.arguments objectAtIndex:4]);
 
-            ADAuthenticationContext *authContext = [CordovaAdalPlugin getOrCreateAuthContext:authority
+            NSString *authority = [obj objectForKey:@"authority"] ? [RCTConvert NSString:obj[@"authority"]] : nil;
+            NSString *resourceId = [obj objectForKey:@"resourceId"] ? [RCTConvert NSString:obj[@"resourceId"]] : nil;
+            NSString *clientId = [obj objectForKey:@"clientId"] ? [RCTConvert NSString:obj[@"clientId"]] : nil;
+            NSString *userId = [obj objectForKey:@"userId"] ? [RCTConvert NSString:obj[@"userId"]] : nil;
+
+            BOOL validateAuthority = [obj objectForKey:@"validateAuthority"] ? [RCTConvert BOOL:obj[@"validateAuthority"]] : false;
+
+
+            ADAuthenticationContext *authContext = [ReactNativeAdalPlugin getOrCreateAuthContext:authority
                                                                            validateAuthority:validateAuthority];
 
+
             // TODO iOS sdk requires user name instead of guid so we should map provided id to a known user name
-            userId = [CordovaAdalUtils mapUserIdToUserName:authContext
+            userId = [ReactNativeAdalUtils mapUserIdToUserName:authContext
                                                     userId:userId];
 
             [authContext acquireTokenSilentWithResource:resourceId
@@ -107,24 +123,25 @@
                                             redirectUri:nil
                                                  userId:userId
                                         completionBlock:^(ADAuthenticationResult *result) {
-                                            NSMutableDictionary *msg = [CordovaAdalUtils ADAuthenticationResultToDictionary: result];
-                                            CDVCommandStatus status = (AD_SUCCEEDED != result.status) ? CDVCommandStatus_ERROR : CDVCommandStatus_OK;
-                                            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:status messageAsDictionary: msg];
-                                            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                                          NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationResultToDictionary:result];
+                                          if (AD_SUCCEEDED != result.status){
+                                            callback(@[dict, [NSNull null]]);
+                                          }
+                                          else{
+                                            callback(@[[NSNull null], dict]);
+                                          }
                                         }];
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+            callback(@[dict, [NSNull null]]);
         }
-    }];
+
 }
 
-- (void)tokenCacheClear:(CDVInvokedUrlCommand *)command
+RCT_EXPORT_METHOD(tokenCacheClear:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
             ADAuthenticationError *error;
@@ -143,22 +160,17 @@
                 @throw(error);
             }
 
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            callback(@[[NSNull null]]);
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+            callback(@[dict, [NSNull null]]);
         }
-    }];
 }
 
-- (void)tokenCacheReadItems:(CDVInvokedUrlCommand *)command
+RCT_EXPORT_METHOD(tokenCacheReadItems:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
             ADAuthenticationError *error;
@@ -177,41 +189,38 @@
 
             for (id obj in cacheItems)
             {
-                [items addObject:[CordovaAdalUtils ADTokenCacheStoreItemToDictionary:obj]];
+                [items addObject:[ReactNativeAdalUtils ADTokenCacheStoreItemToDictionary:obj]];
             }
 
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                               messageAsArray:items];
-
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            callback(@[[NSNull null], items]);
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+            callback(@[dict, [NSNull null]]);
         }
-    }];
 }
-- (void)tokenCacheDeleteItem:(CDVInvokedUrlCommand *)command
+
+
+RCT_EXPORT_METHOD(tokenCacheDeleteItem:(NSDictionary *)obj callback: (RCTResponseSenderBlock)callback)
 {
-    [self.commandDelegate runInBackground:^{
         @try
         {
             ADAuthenticationError *error;
 
-            NSString *authority = ObjectOrNil([command.arguments objectAtIndex:0]);
-            BOOL validateAuthority = [[command.arguments objectAtIndex:1] boolValue];
-            NSString *itemAuthority = ObjectOrNil([command.arguments objectAtIndex:2]);
-            NSString *resourceId = ObjectOrNil([command.arguments objectAtIndex:3]);
-            NSString *clientId = ObjectOrNil([command.arguments objectAtIndex:4]);
-            NSString *userId = ObjectOrNil([command.arguments objectAtIndex:5]);
+            NSString *authority = [obj objectForKey:@"authority"] ? [RCTConvert NSString:obj[@"authority"]] : nil;
+            NSString *resourceId = [obj objectForKey:@"resourceId"] ? [RCTConvert NSString:obj[@"resourceId"]] : nil;
+            NSString *clientId = [obj objectForKey:@"clientId"] ? [RCTConvert NSString:obj[@"clientId"]] : nil;
+            NSString *userId = [obj objectForKey:@"userId"] ? [RCTConvert NSString:obj[@"userId"]] : nil;
+            NSString *itemAuthority =[obj objectForKey:@"itemAuthority"] ? [RCTConvert NSString:obj[@"itemAuthority"]] : nil;
 
-            ADAuthenticationContext *authContext = [CordovaAdalPlugin getOrCreateAuthContext:authority
+            BOOL validateAuthority = [obj objectForKey:@"validateAuthority"] ? [RCTConvert BOOL:obj[@"validateAuthority"]] : false;
+
+            ADAuthenticationContext *authContext = [ReactNativeAdalPlugin getOrCreateAuthContext:authority
                                                                            validateAuthority:validateAuthority];
 
             // TODO iOS sdk requires user name instead of guid so we should map provided id to a known user name
-            userId = [CordovaAdalUtils mapUserIdToUserName:authContext
+            userId = [ReactNativeAdalUtils mapUserIdToUserName:authContext
                                                     userId:userId];
 
             ADKeychainTokenCache* cacheStore = [ADKeychainTokenCache new];
@@ -248,16 +257,13 @@
 
             }
 
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            callback(@[[NSNull null]]);
         }
         @catch (ADAuthenticationError *error)
         {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsDictionary:[CordovaAdalUtils ADAuthenticationErrorToDictionary:error]];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+          NSMutableDictionary *dict = [ReactNativeAdalUtils ADAuthenticationErrorToDictionary:error];
+          callback(@[dict, [NSNull null]]);
         }
-    }];
 }
 
 static NSMutableDictionary *existingContexts = nil;
@@ -288,11 +294,6 @@ static NSMutableDictionary *existingContexts = nil;
     }
 
     return authContext;
-}
-
-static id ObjectOrNil(id object)
-{
-    return [object isKindOfClass:[NSNull class]] ? nil : object;
 }
 
 @end

@@ -1,11 +1,11 @@
+// Copyright (c) Northwestern Mutual.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+
 // Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 /*global module, require*/
+import { NativeModules } from 'react-native';
+var reactNativeAdalPlugin = NativeModules.ReactNativeAdalPlugin;
 
-var checkArgs = require('cordova/argscheck').checkArgs;
-
-var bridge = require('./CordovaBridge');
-var Deferred = require('./utility').Utility.Deferred;
 
 module.exports = {
 
@@ -18,16 +18,17 @@ module.exports = {
      * @returns {Promise}  Promise either fulfilled or rejected with error
      */
     setUseBroker: function(useBroker) {
+        return new Promise( (resolve, reject) => {
 
-        checkArgs('*', 'AuthenticationSettings.setUseBroker', arguments);
+            reactNativeAdalPlugin.setUseBroker({
+                useBroker: !!useBroker
+            }, (err) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve();
+            });
 
-        if (cordova.platformId === 'android') {
-            return bridge.executeNativeMethod('setUseBroker', [!!useBroker]);
-        }
-
-        // Broker is handled by system on Windows/iOS
-        var deferred = new Deferred();
-        deferred.resolve();
-        return deferred;
+        });
     }
 }

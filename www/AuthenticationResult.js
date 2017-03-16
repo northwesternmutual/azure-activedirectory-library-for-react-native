@@ -1,3 +1,5 @@
+// Copyright (c) Northwestern Mutual.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+
 // Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 /*global module, require*/
@@ -17,16 +19,7 @@ function AuthenticationResult(authResult) {
     this.statusCode = authResult.statusCode;
     this.tenantId = authResult.tenantId;
 
-    var jwtToken = authResult.idToken || authResult.accessToken;
-    this.userInfo = null;
-
-    if (jwtToken) {
-        this.userInfo = UserInfo.fromJWT(jwtToken);
-    }
-
-    if (!this.userInfo) {
-        this.userInfo = new UserInfo(authResult.userInfo);
-    }
+    this.userInfo = authResult.idToken ? UserInfo.fromJWT(authResult.idToken) : null;
 }
 
 /**
@@ -35,7 +28,7 @@ function AuthenticationResult(authResult) {
  * @returns {String} The authorization header.
  */
 AuthenticationResult.prototype.createAuthorizationHeader = function() {
-     return "Bearer " + this.accessToken;
+    return "Bearer " + this.accessToken;
 };
 
 module.exports = AuthenticationResult;

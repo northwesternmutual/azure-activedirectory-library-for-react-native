@@ -1,4 +1,11 @@
 /*******************************************************************************
+ * Copyright (c) Northwestern Mutual
+ * All Rights Reserved
+ * Licensed under the Apache License, Version 2.0.
+ * See License.txt in the project root for license information.
+ ******************************************************************************/
+
+/*******************************************************************************
  * Copyright (c) Microsoft Open Technologies, Inc.
  * All Rights Reserved
  * Licensed under the Apache License, Version 2.0.
@@ -8,16 +15,28 @@
 package com.microsoft.aad.adal;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.PermissionHelper;
-import org.apache.cordova.PluginResult;
+import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.BaseActivityEventListener;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
+import com.reactnatvereferenceapp.MainActivity;
+import com.reactnatvereferenceapp.MainApplication;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -36,7 +55,12 @@ import javax.crypto.spec.SecretKeySpec;
 
 import static com.microsoft.aad.adal.SimpleSerialization.tokenItemToJSON;
 
-public class CordovaAdalPlugin extends CordovaPlugin {
+public class ReactNativeAdalPlugin extends ReactContextBaseJavaModule {
+
+    @Override
+    public String getName() {
+        return "ReactNativeAdalPlugin";
+    }
 
     private static final PromptBehavior SHOW_PROMPT_ALWAYS = PromptBehavior.Always;
 
@@ -46,11 +70,26 @@ public class CordovaAdalPlugin extends CordovaPlugin {
 
     private final Hashtable<String, AuthenticationContext> contexts = new Hashtable<String, AuthenticationContext>();
     private AuthenticationContext currentContext;
-    private CallbackContext callbackContext;
+    private Callback permissionCallback;
 
-    public CordovaAdalPlugin() {
+    private final ActivityEventListener activityEventListener = new BaseActivityEventListener() {
 
-        // Android API < 18 does not support AndroidKeyStore so ADAL requires
+        @Override
+        public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+            if (currentContext != null) {
+                currentContext.onActivityResult(requestCode, resultCode, data);
+            }
+        }
+    };
+
+    public ReactNativeAdalPlugin(ReactApplicationContext reactContext) {
+        super(reactContext);
+
+
+
+        reactContext.addActivityEventListener(activityEventListener);
+
+        //Android API < 18 does not support AndroidKeyStore so ADAL requires
         // some extra work to crete and pass secret key to ADAL.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
             try {
@@ -62,103 +101,39 @@ public class CordovaAdalPlugin extends CordovaPlugin {
         }
     }
 
-    @Override
-    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
 
-        this.cordova.setActivityResultCallback(this);
-        this.callbackContext = callbackContext;
-
-        if (action.equals("createAsync")) {
-
-            // Don't catch JSONException since it is already handled by Cordova
-            String authority = args.getString(0);
-            // Due to https://github.com/AzureAD/azure-activedirectory-library-for-android/blob/master/src/src/com/microsoft/aad/adal/AuthenticationContext.java#L158
-            // AuthenticationContext constructor validates authority by default
-            boolean validateAuthority = args.optBoolean(1, true);
-            return createAsync(authority, validateAuthority);
-
-        } else if (action.equals("acquireTokenAsync")) {
-
-            String authority = args.getString(0);
-            boolean validateAuthority = args.optBoolean(1, true);
-            String resourceUrl = args.getString(2);
-            String clientId = args.getString(3);
-            String redirectUrl = args.getString(4);
-            String userId = args.optString(5, null);
-            userId = userId.equals("null") ? null : userId;
-            String extraQueryParams = args.optString(6, null);
-            extraQueryParams = extraQueryParams.equals("null") ? null : extraQueryParams;
-
-            return acquireTokenAsync(authority, validateAuthority, resourceUrl, clientId, redirectUrl, userId, extraQueryParams);
-
-        } else if (action.equals("acquireTokenSilentAsync")) {
-
-            String authority = args.getString(0);
-            boolean validateAuthority = args.optBoolean(1, true);
-            String resourceUrl = args.getString(2);
-            String clientId = args.getString(3);
-            String userId = args.getString(4);
-
-            // This is a workaround for Cordova bridge issue. When null us passed from JS side
-            // it is being translated to "null" string
-            userId = userId.equals("null") ? null : userId;
-
-            return acquireTokenSilentAsync(authority, validateAuthority, resourceUrl, clientId, userId);
-
-        } else if (action.equals("tokenCacheClear")){
-
-            String authority = args.getString(0);
-            boolean validateAuthority = args.optBoolean(1, true);
-            return clearTokenCache(authority, validateAuthority);
-
-        } else if (action.equals("tokenCacheReadItems")){
-
-            String authority = args.getString(0);
-            boolean validateAuthority = args.optBoolean(1, true);
-            return readTokenCacheItems(authority, validateAuthority);
-
-        } else if (action.equals("tokenCacheDeleteItem")){
-
-            String authority = args.getString(0);
-            boolean validateAuthority = args.optBoolean(1, true);
-            String itemAuthority = args.getString(2);
-            String resource = args.getString(3);
-            resource = resource.equals("null") ? null : resource;
-            String clientId = args.getString(4);
-            String userId = args.getString(5);
-            boolean isMultipleResourceRefreshToken = args.getBoolean(6);
-
-            return deleteTokenCacheItem(authority, validateAuthority, itemAuthority, resource, clientId, userId, isMultipleResourceRefreshToken);
-        } else if (action.equals("setUseBroker")) {
-
-            boolean useBroker = args.getBoolean(0);
-            return setUseBroker(useBroker);
-        }
-
-        return false;
-    }
-
-    private boolean createAsync(String authority, boolean validateAuthority) {
+    @ReactMethod
+    public void createAsync(ReadableMap obj, Callback callback) {
 
         try {
-            getOrCreateContext(authority, validateAuthority);
-        } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
-        }
+            String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+            boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
 
-        callbackContext.success();
-        return true;
+            getOrCreateContext(authority, validateAuthority);
+            callback.invoke();
+
+        } catch (Exception e) {
+            callback.invoke(e.getMessage());
+        }
     }
 
-    private boolean acquireTokenAsync(String authority, boolean validateAuthority, String resourceUrl, String clientId, String redirectUrl, String userId, String extraQueryParams) {
+    @ReactMethod
+    public void acquireTokenAsync(ReadableMap obj, Callback callback) {
 
         final AuthenticationContext authContext;
+        String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+        boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
+        String resourceId = obj.hasKey("resourceId") ? obj.getString("resourceId") : null;
+        String clientId = obj.hasKey("clientId") ? obj.getString("clientId") : null;
+        String redirectUri = obj.hasKey("redirectUri") ? obj.getString("redirectUri") : null;
+        String userId = obj.hasKey("userId") ? obj.getString("userId") : null;
+        String extraQueryParams = obj.hasKey("extraQueryParams") ? obj.getString("extraQueryParams") : null;
+
         try{
             authContext = getOrCreateContext(authority, validateAuthority);
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
+            return;
         }
 
         if (userId != null) {
@@ -173,16 +148,19 @@ public class CordovaAdalPlugin extends CordovaPlugin {
             }
         }
 
-        authContext.acquireToken(this.cordova.getActivity(), resourceUrl, clientId, redirectUrl,
-                userId, SHOW_PROMPT_ALWAYS, extraQueryParams, new DefaultAuthenticationCallback(callbackContext));
-
-        return true;
-
+        authContext.acquireToken(this.getCurrentActivity(), resourceId, clientId, redirectUri,
+                userId, SHOW_PROMPT_ALWAYS, extraQueryParams, new DefaultAuthenticationCallback(callback));
     }
 
-    private boolean acquireTokenSilentAsync(String authority, boolean validateAuthority, String resourceUrl, String clientId, String userId) {
+    @ReactMethod
+    public void acquireTokenSilentAsync(ReadableMap obj, Callback callback) { //String authority, boolean validateAuthority, String resourceUrl, String clientId, String userId) {
 
         final AuthenticationContext authContext;
+        String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+        boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
+        String resourceId = obj.hasKey("resourceId") ? obj.getString("resourceId") : null;
+        String clientId = obj.hasKey("clientId") ? obj.getString("clientId") : null;
+        String userId = obj.hasKey("userId") ? obj.getString("userId") : null;
         try{
             authContext = getOrCreateContext(authority, validateAuthority);
 
@@ -203,25 +181,28 @@ public class CordovaAdalPlugin extends CordovaPlugin {
             }
 
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
+            return;
         }
 
-        authContext.acquireTokenSilent(resourceUrl, clientId, userId, new DefaultAuthenticationCallback(callbackContext));
-        return true;
+        authContext.acquireTokenSilentAsync(resourceId, clientId, userId, new DefaultAuthenticationCallback(callback));
     }
 
-    private boolean readTokenCacheItems(String authority, boolean validateAuthority) throws JSONException {
+    @ReactMethod
+    public void tokenCacheReadItems(ReadableMap obj, Callback callback) throws JSONException {
 
         final AuthenticationContext authContext;
+        String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+        boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
+
         try{
             authContext = getOrCreateContext(authority, validateAuthority);
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
+            return;
         }
 
-        JSONArray result = new JSONArray();
+        WritableArray result = Arguments.createArray();
         ITokenCacheStore cache = authContext.getCache();
 
         if (cache instanceof ITokenStoreQuery) {
@@ -229,49 +210,62 @@ public class CordovaAdalPlugin extends CordovaPlugin {
 
             while (cacheItems.hasNext()){
                 TokenCacheItem item = cacheItems.next();
-                result.put(tokenItemToJSON(item));
+                result.pushMap(tokenItemToJSON(item));
             }
         }
 
-        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+        callback.invoke(null, result);
 
-        return true;
     }
 
-    private boolean deleteTokenCacheItem(String authority, boolean validateAuthority, String itemAuthority,  String resource,
-                                         String clientId, String userId, boolean isMultipleResourceRefreshToken) {
+    @ReactMethod
+    public void tokenCacheDeleteItem(ReadableMap obj, Callback callback) {
+
 
         final AuthenticationContext authContext;
+        String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+        boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
+        String resourceId = obj.hasKey("resourceId") ? obj.getString("resourceId") : null;
+        String clientId = obj.hasKey("clientId") ? obj.getString("clientId") : null;
+        String userId = obj.hasKey("userId") ? obj.getString("userId") : null;
+        String itemAuthority = obj.hasKey("itemAuthority") ? obj.getString("itemAuthority") : null;
+        boolean isMultipleResourceRefreshToken = obj.hasKey("isMultipleResourceRefreshToken") ? obj.getBoolean("isMultipleResourceRefreshToken") : false;
+
+
         try{
             authContext = getOrCreateContext(authority, validateAuthority);
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
+            return;
         }
 
-        String key = CacheKey.createCacheKey(itemAuthority, resource, clientId, isMultipleResourceRefreshToken, userId, null);
+        String key = CacheKey.createCacheKey(itemAuthority, resourceId, clientId, isMultipleResourceRefreshToken, userId, "1");
         authContext.getCache().removeItem(key);
 
-        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
-        return true;
+        callback.invoke();
     }
 
-    private boolean clearTokenCache(String authority, boolean validateAuthority) {
+    @ReactMethod
+    public void tokenCacheClear(ReadableMap obj, Callback callback) {
         final AuthenticationContext authContext;
+        String authority = obj.hasKey("authority") ? obj.getString("authority") : null;
+        boolean validateAuthority = obj.hasKey("validateAuthority") ? obj.getBoolean("validateAuthority") : false;
         try{
             authContext = getOrCreateContext(authority, validateAuthority);
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
+            return;
         }
 
         authContext.getCache().removeAll();
-        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
-        return true;
+        callback.invoke();
     }
 
-    private boolean setUseBroker(boolean useBroker) {
+    @ReactMethod
+    public void setUseBroker(ReadableMap obj, Callback callback) {
 
+        boolean useBroker = obj.hasKey("useBroker") ? obj.getBoolean("useBroker") : false;
+        this.permissionCallback = callback;
         try {
             AuthenticationSettings.INSTANCE.setUseBroker(useBroker);
 
@@ -282,37 +276,27 @@ public class CordovaAdalPlugin extends CordovaPlugin {
 
                 requestBrokerPermissions();
                 // Cordova callback will be handled by requestBrokerPermissions method
-                return true;
             }
 
         } catch (Exception e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
-            return true;
+            callback.invoke(e.getMessage());
         }
-
-        callbackContext.success();
-        return true;
     }
 
     private void requestBrokerPermissions() {
 
-        // USE_CREDENTIALS and MANAGE_ACOUNTS are deprecated and not required
-        if(PermissionHelper.hasPermission(this, Manifest.permission.GET_ACCOUNTS)) { // android.permission.GET_ACCOUNTS
+        if(ContextCompat.checkSelfPermission(this.getCurrentActivity(), Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_GRANTED) { // android.permission.GET_ACCOUNTS
             // already granted
-            callbackContext.success();
+            this.permissionCallback.invoke();
             return;
         }
 
-        PermissionHelper.requestPermission(this, GET_ACCOUNTS_PERMISSION_REQ_CODE, Manifest.permission.GET_ACCOUNTS);
+        ActivityCompat.requestPermissions(this.getCurrentActivity(),
+                new String[]{Manifest.permission.GET_ACCOUNTS},
+                GET_ACCOUNTS_PERMISSION_REQ_CODE);
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (currentContext != null) {
-            currentContext.onActivityResult(requestCode, resultCode, data);
-        }
-    }
+
 
     public void onRequestPermissionResult(int requestCode, String[] permissions,
                                           int[] grantResults) throws JSONException
@@ -321,18 +305,18 @@ public class CordovaAdalPlugin extends CordovaPlugin {
         {
             if(r == PackageManager.PERMISSION_DENIED)
             {
-                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+                this.permissionCallback.invoke(PERMISSION_DENIED_ERROR);
                 return;
             }
         }
-        callbackContext.success();
+        this.permissionCallback.invoke();
     }
 
     private AuthenticationContext getOrCreateContext (String authority, boolean validateAuthority) throws NoSuchPaddingException, NoSuchAlgorithmException {
 
         AuthenticationContext result;
         if (!contexts.containsKey(authority)) {
-            result = new AuthenticationContext(this.cordova.getActivity(), authority, validateAuthority);
+            result = new AuthenticationContext(this.getCurrentActivity(), authority, validateAuthority);
             this.contexts.put(authority, result);
         } else {
             result = contexts.get(authority);

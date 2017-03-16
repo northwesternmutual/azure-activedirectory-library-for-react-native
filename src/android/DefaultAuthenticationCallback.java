@@ -1,4 +1,11 @@
 /*******************************************************************************
+ * Copyright (c) Northwestern Mutual
+ * All Rights Reserved
+ * Licensed under the Apache License, Version 2.0.
+ * See License.txt in the project root for license information.
+ ******************************************************************************/
+
+/*******************************************************************************
  * Copyright (c) Microsoft Open Technologies, Inc.
  * All Rights Reserved
  * Licensed under the Apache License, Version 2.0.
@@ -7,8 +14,12 @@
 
 package com.microsoft.aad.adal;
 
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.PluginResult;
+import android.util.Log;
+
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.WritableMap;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -23,13 +34,13 @@ class DefaultAuthenticationCallback implements AuthenticationCallback<Authentica
     /**
      * Private field that stores cordova callback context which is used to send results back to JS
      */
-    private final CallbackContext callbackContext;
+    private final Callback callbackContext;
 
     /**
      * Default constructor
      * @param callbackContext Cordova callback context which is used to send results back to JS
      */
-    DefaultAuthenticationCallback(CallbackContext callbackContext){
+    DefaultAuthenticationCallback(Callback callbackContext){
         this.callbackContext = callbackContext;
     }
 
@@ -40,13 +51,12 @@ class DefaultAuthenticationCallback implements AuthenticationCallback<Authentica
     @Override
     public void onSuccess(AuthenticationResult authResult) {
 
-        JSONObject result;
+        WritableMap result;
         try {
             result = authenticationResultToJSON(authResult);
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
-        } catch (JSONException e) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION,
-                    "Failed to serialize Authentication result"));
+            callbackContext.invoke(null, result);
+        } catch (Exception e) {
+            callbackContext.invoke("Failed to serialize Authentication result");
         }
     }
 
@@ -56,16 +66,17 @@ class DefaultAuthenticationCallback implements AuthenticationCallback<Authentica
      */
     @Override
     public void onError(Exception authException) {
-        JSONObject cordovaError = new JSONObject();
+
+        WritableMap error = Arguments.createMap();
         try {
-            cordovaError.put("errorDescription",authException.getMessage());
+            error.putString("errorDescription",authException.getMessage());
             if (authException instanceof AuthenticationException) {
-                cordovaError.put("errorCode", ((AuthenticationException)authException).getCode().toString());
+                error.putString("errorCode", ((AuthenticationException)authException).mCode.toString());
             }
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, cordovaError));
+            callbackContext.invoke(error);
         }
-        catch(JSONException ex){
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION, ex.getMessage()));
+        catch(Exception ex){
+            callbackContext.invoke(ex.getMessage());
         }
     }
 }

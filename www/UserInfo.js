@@ -1,3 +1,5 @@
+// Copyright (c) Northwestern Mutual.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+
 // Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 /*global module*/
@@ -22,7 +24,7 @@ function UserInfo(userInfo) {
 }
 
 /**
- * Parses jwt token that contains user information and produces a valid UserInfo structure.
+ * Parses jwt token that contains a use information and produces a valid UserInfo structure.
  * This method is intended for internal use and should not be used by end-user.
  *
  * @param  {String} jwtToken String that contains a valid JWT token, that contains user information.

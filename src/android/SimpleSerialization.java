@@ -1,4 +1,11 @@
 /*******************************************************************************
+ * Copyright (c) Northwestern Mutual
+ * All Rights Reserved
+ * Licensed under the Apache License, Version 2.0.
+ * See License.txt in the project root for license information.
+ ******************************************************************************/
+
+/*******************************************************************************
  * Copyright (c) Microsoft Open Technologies, Inc.
  * All Rights Reserved
  * Licensed under the Apache License, Version 2.0.
@@ -6,6 +13,9 @@
  ******************************************************************************/
 
 package com.microsoft.aad.adal;
+
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,22 +31,22 @@ class SimpleSerialization {
      * @return JSONObject that represents a UserInfo structure
      * @throws JSONException
      */
-    static JSONObject userInfoToJSON(UserInfo info) throws JSONException {
+    static WritableMap userInfoToJSON(UserInfo info) {
 
-        JSONObject userInfo = new JSONObject();
+        WritableMap userInfo = Arguments.createMap();
 
         if (info == null) {
             return userInfo;
         }
 
-        userInfo.put("displayableId", info.getDisplayableId());
-        userInfo.put("familyName", info.getFamilyName());
-        userInfo.put("givenName", info.getGivenName());
-        userInfo.put("identityProvider", info.getIdentityProvider());
-        userInfo.put("passwordChangeUrl", info.getPasswordChangeUrl());
-        userInfo.put("passwordExpiresOn", info.getPasswordExpiresOn());
-        userInfo.put("uniqueId", info.getUserId());
-        userInfo.put("userId", info.getUserId());
+        userInfo.putString("displayableId", info.getDisplayableId());
+        userInfo.putString("familyName", info.getFamilyName());
+        userInfo.putString("givenName", info.getGivenName());
+        userInfo.putString("identityProvider", info.getIdentityProvider());
+        userInfo.putString("passwordChangeUrl", String.valueOf(info.getPasswordChangeUrl()));
+        userInfo.putString("passwordExpiresOn", String.valueOf(info.getPasswordExpiresOn()));
+        userInfo.putString("uniqueId", info.getUserId());
+        userInfo.putString("userId", info.getUserId());
 
         return userInfo;
     }
@@ -49,23 +59,21 @@ class SimpleSerialization {
      * @return JSONObject that represents a AuthenticationResult structure
      * @throws JSONException
      */
-    static JSONObject authenticationResultToJSON(AuthenticationResult authenticationResult) throws JSONException {
-        JSONObject authResult = new JSONObject();
+    static WritableMap authenticationResultToJSON(AuthenticationResult authenticationResult) {
+        WritableMap authResult = Arguments.createMap();
 
-        authResult.put("accessToken", authenticationResult.getAccessToken());
-        authResult.put("accessTokenType", authenticationResult.getAccessTokenType());
-        authResult.put("expiresOn", authenticationResult.getExpiresOn());
-        authResult.put("idToken", authenticationResult.getIdToken());
-        authResult.put("isMultipleResourceRefreshToken", authenticationResult.getIsMultiResourceRefreshToken());
-        authResult.put("statusCode", authenticationResult.getStatus());
-        authResult.put("tenantId", authenticationResult.getTenantId());
+        authResult.putString("accessToken", authenticationResult.getAccessToken());
+        authResult.putString("accessTokenType", authenticationResult.getAccessTokenType());
+        authResult.putString("expiresOn", String.valueOf(authenticationResult.getExpiresOn()));
+        authResult.putString("idToken", authenticationResult.getIdToken());
+        authResult.putBoolean("isMultipleResourceRefreshToken", authenticationResult.getIsMultiResourceRefreshToken());
+        authResult.putString("statusCode", String.valueOf(authenticationResult.getStatus()));
+        authResult.putString("tenantId", authenticationResult.getTenantId());
 
-        JSONObject userInfo = null;
-        try {
-            userInfo = userInfoToJSON(authenticationResult.getUserInfo());
-        } catch (JSONException ignored) {}
+        WritableMap userInfo = null;
+        userInfo = userInfoToJSON(authenticationResult.getUserInfo());
 
-        authResult.put("userInfo", userInfo);
+        authResult.putMap("userInfo", userInfo);
 
         return authResult;
     }
@@ -78,24 +86,24 @@ class SimpleSerialization {
      * @return JSONObject that represents a TokenCacheItem structure
      * @throws JSONException
      */
-    static JSONObject tokenItemToJSON(TokenCacheItem item) throws JSONException {
-        JSONObject result = new JSONObject();
+    static WritableMap tokenItemToJSON(TokenCacheItem item) {
+        WritableMap result = Arguments.createMap();
 
-        result.put("accessToken", item.getAccessToken());
-        result.put("authority", item.getAuthority());
-        result.put("clientId", item.getClientId());
-        result.put("expiresOn", item.getExpiresOn());
-        result.put("isMultipleResourceRefreshToken", item.getIsMultiResourceRefreshToken());
-        result.put("resource", item.getResource());
-        result.put("tenantId", item.getTenantId());
-        result.put("idToken", item.getRawIdToken());
+        result.putString("accessToken", item.getAccessToken());
+        result.putString("authority", item.getAuthority());
+        result.putString("clientId", item.getClientId());
+        result.putString("expiresOn", String.valueOf(item.getExpiresOn()));
+        result.putBoolean("isMultipleResourceRefreshToken", item.getIsMultiResourceRefreshToken());
+        result.putString("resource", item.getResource());
+        result.putString("tenantId", item.getTenantId());
+        result.putString("idToken", item.getRawIdToken());
 
-        JSONObject userInfo = null;
-        try {
-            userInfo = userInfoToJSON(item.getUserInfo());
-        } catch (JSONException ignored) {}
+        WritableMap userInfo = null;
 
-        result.put("userInfo", userInfo);
+        userInfo = userInfoToJSON(item.getUserInfo());
+
+
+        result.putMap("userInfo", userInfo);
 
         return result;
     }

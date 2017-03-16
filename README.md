@@ -1,40 +1,87 @@
-# Active Directory Authentication Library (ADAL) plugin for Apache Cordova apps
-
-[![Build status](https://ci.appveyor.com/api/projects/status/hslf0dq6i33p320v/branch/master?svg=true)](https://ci.appveyor.com/project/adal-for-cordova-bot/azure-activedirectory-library-for-cordova/branch/master)
-[![Build Status](https://travis-ci.org/AzureAD/azure-activedirectory-library-for-cordova.svg?branch=master)](https://travis-ci.org/AzureAD/azure-activedirectory-library-for-cordova)
+# Active Directory Authentication Library (ADAL) plugin for React Native apps
 
 Active Directory Authentication Library ([ADAL](https://msdn.microsoft.com/en-us/library/azure/jj573266.aspx)) plugin provides easy to use authentication functionality for your Apache Cordova apps by taking advantage of Windows Server Active Directory and Windows Azure Active Directory.
 Here you can find the source code for the library.
 
   * [ADAL for Android](https://github.com/AzureAD/azure-activedirectory-library-for-android),
   * [ADAL for iOS](https://github.com/AzureAD/azure-activedirectory-library-for-objc),
-  * [ADAL for .NET](https://github.com/AzureAD/azure-activedirectory-library-for-dotnet).
 
-## NOTICE: iOS 10 and Azure Authentication
+This library is a fork of the library for Cordova. The code was change into a plugin to work with React Native. The JavaScript API's were kept virtually the same to keep parity between the two plugins. 
 
-**If you're using plugin version < 0.8.x on iOS platform, we strongly recommend you to update your application to use newest version of the plugin in order to support authentication on iOS 10, otherwise your users will not be able to sign-in once iOS 10 is released.**
+## Initial setup
+1. create you application in Azure AD. You will need to set the redriect URI for the application. 
+    1. iOS:  `x-msauth-mytestiosapp://com.myapp.mytestapp`
+    1. android: `msauth://packagename/Base64UrlencodedSignature`
+        
+        You can get your redirecturi for your app using the script brokerRedirectPrint.ps1 on Windows or brokerRedirectPrint.sh on Linux or Mac from the [Android SDK repo](https://github.com/AzureAD/azure-activedirectory-library-for-android). You can also use API call mContext.getBrokerRedirectUri. Signature is related to your signing certificates.
 
-Once you’ve updated plugin to the latest version your application will continue to work, there is no further code changes required for your application to continue working.
+        Yes, since the redirect URI is based on your signing cert, it will change if your cert changes. If you are not using a common dev cert the redirect URI will be different on each developers computers.
+1. follow the directions below
 
-### To update your application using Cordova CLI
+### Manually Install iOS
 
-- navigate to your app's directory
-- run the following commands:
+1. Copy src/ios/* to <path to RN app>/ios/<appname>
+1. Open xcdoe to <path to RN app>/ios and include those files in the app.
+1. Add the following to the apps .plist files.
 
     ```
-    cordova plugin rm cordova-plugin-ms-adal --save
-    cordova plugin add cordova-plugin-ms-adal@0.8.x --save
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>msauth</string>
+    </array>
+    ```
+    
+    ```
+    <key>CFBundleURLTypes</key>
+    <array>     
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLName</key>
+        <string>$(CFBundleIdentifier)</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>x-msauth-$(CFBundleIdentifier:rfc1034identifier)</string>
+        </array>
+      </dict>
+    </array>
+    ```
+    
+    ```
+    <key>CFBundleIdentifier</key>
+    <string>org.your.package.bundle.name</string>
     ```
 
-## Community Help and Support
+1. If dong brokered auth, keychain sharing must be enabled under the Capabilities Settings. Add the keychain group `com.microsoft.adalcache`
 
-We leverage [Stack Overflow](http://stackoverflow.com/) to work with the community on supporting Azure Active Directory and its SDKs, including this one! We highly recommend you ask your questions on Stack Overflow (we're all on there!) Also browser existing issues to see if someone has had your question before.
 
-We recommend you use the "adal" tag so we can see it! Here is the latest Q&A on Stack Overflow for ADAL: [http://stackoverflow.com/questions/tagged/adal](http://stackoverflow.com/questions/tagged/adal)
 
-## Security Reporting
+### Manually Install Android
 
-If you find a security issue with our libraries or services please report it to [secure@microsoft.com](mailto:secure@microsoft.com) with as much detail as possible. Your submission may be eligible for a bounty through the [Microsoft Bounty](http://aka.ms/bugbounty) program. Please do not post security issues to GitHub Issues or any other public site. We will contact you shortly upon receiving the information. We encourage you to get notifications of when security incidents occur by visiting [this page](https://technet.microsoft.com/en-us/security/dd252948) and subscribing to Security Advisory Alerts.
+
+1. copy src/android/* to <path to RN app>/android/app/src/java/com/microsoft/add/adal
+1. Add `compile('com.microsoft.aad:adal:1.2.2')` to the `build.gradle (Module: app)` file
+1. Add the following to AndroidManifest.xml
+    ```
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    
+    <activity android:configChanges="orientation|keyboardHidden|screenSize" android:name="com.microsoft.aad.adal.AuthenticationActivity" />
+    ```
+1. Open MainApplication.java and add `new ReactNativeAdalPackage()` to the return of the `getPackages()` method. You will need to add the import statement `import com.microsoft.aad.adal.ReactNativeAdalPackage;` as  well 
+1. If doing brokered auth, you must call `AuthenticationSettings.setUseBroker(config.adal.brokeredAuth);`
+
+### Manually Install JavaScript into React Native app
+
+1. Copy contents of www folder into your React Native app. Example `app/utilities`
+1. add the following to where you want to use the ADAL lib
+    ```javascript
+    import AuthenticationContext from "./AuthenticationContext";
+    import AuthenticationSettings from "./AuthenticationSettings";
+    ```
 
 ## How To Use The Library
 
@@ -42,18 +89,23 @@ This plugin uses native SDKs for ADAL for each supported platform and provides s
 
 ```javascript
 
+import AuthenticationContext from "./AuthenticationContext";
+import AuthenticationSettings from "./AuthenticationSettings";
+
+AuthenticationSettings.setUseBroker(false)
+
 // Shows user authentication dialog if required
 function authenticate(authCompletedCallback, errorCallback) {
-  var authContext = new Microsoft.ADAL.AuthenticationContext(authority);
+  var authContext = new AuthenticationContext(authority);
   authContext.tokenCache.readItems().then(function (items) {
     if (items.length > 0) {
         authority = items[0].authority;
-        authContext = new Microsoft.ADAL.AuthenticationContext(authority);
+        authContext = new AuthenticationContext(authority);
     }
     // Attempt to authorize user silently
     authContext.acquireTokenSilentAsync(resourceUri, clientId)
     .then(authCompletedCallback, function () {
-        // We require user credentials so triggers authentication dialog
+        // We require user cridentials so triggers authentication dialog
         authContext.acquireTokenAsync(resourceUri, clientId, redirectUri)
         .then(authCompletedCallback, errorCallback);
     });
@@ -68,14 +120,11 @@ authenticate(function(authResponse) {
 });
 ```
 
-For more API documentation and examples see [Azure AD Cordova Getting Started](https://azure.microsoft.com/en-us/documentation/articles/active-directory-devquickstarts-cordova/) and JSDoc for exposed functionality stored in [www](https://github.com/AzureAD/azure-activedirectory-library-for-cordova/tree/master/www) subfolder.
-
 ## Supported platforms
 
   * Android (OS 4.0.3 and higher)
   * iOS
-  * Windows (Windows 8.0, Windows 8.1, Windows 10 and Windows Phone 8.1)
-
+ 
 ## Creating new AuthenticationContext
 
 The `Microsoft.ADAL.AuthenticationContext` class retrieves authentication tokens from Azure Active Directory and ADFS services.
@@ -196,87 +245,19 @@ Multiple login dialog windows will be shown if `acquireTokenAsync` is called mul
 
 * [NodeJS and NPM](https://nodejs.org/)
 
-* [Cordova CLI](https://cordova.apache.org/)
+* [React Native](https://facebook.github.io/react-native/)
 
-  Cordova CLI can be easily installed via NPM package manager: `npm install -g cordova`
-
-* Additional prerequisites for each target platform can be found at [Cordova platforms documentation](http://cordova.apache.org/docs/en/edge/guide_platforms_index.md.html#Platform%20Guides) page:
-  * [Instructions for Android](http://cordova.apache.org/docs/en/edge/guide_platforms_android_index.md.html#Android%20Platform%20Guide)
-  * [Instructions for iOS](http://cordova.apache.org/docs/en/edge/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide)
-  * [Instructions for Windows] (http://cordova.apache.org/docs/en/edge/guide_platforms_win8_index.md.html#Windows%20Platform%20Guide)
-
-### To build and run sample application
-
-* Clone plugin repository into a directory of your choice
-
-    ```
-    git clone https://github.com/AzureAD/azure-activedirectory-library-for-cordova.git
-    ```
-
-* Create a project and add the platforms you want to support
-
-    ```
-    cordova create ADALSample --copy-from="azure-activedirectory-library-for-cordova/sample"
-    cd ADALSample
-    cordova platform add android
-    cordova platform add ios
-    cordova platform add windows
-    ```
-
-* Add the plugin to your project
-
-    ```
-    cordova plugin add ../azure-activedirectory-library-for-cordova
-    ```
-
-* Build and run application
-
-    ```
-    cordova run
-    ```
 
 ## Setting up an Application in Azure AD
 
 You can find detailed instructions how to set up a new application in Azure AD [here](https://github.com/AzureADSamples/NativeClient-MultiTarget-DotNet#step-4--register-the-sample-with-your-azure-active-directory-tenant).
 
-## Tests
-
-This plugin contains test suite, based on [Cordova test-framework plugin](https://github.com/apache/cordova-plugin-test-framework). The test suite is placed under `tests` folder at the root or repo and represents a separate plugin.
-
-To run the tests you need to create a new application as described in [Installation Instructions section](#installation-instructions) and then do the following steps:
-
-* Add test suite to application
-
-    ```
-    cordova plugin add ../azure-activedirectory-library-for-cordova/tests
-    ```
-
-* Update application's config.xml file: change `<content src="index.html" />` to `<content src="cdvtests/index.html" />`
-* Change AD-specific settings for test application at the beginning of `plugins\cordova-plugin-ms-adal\www\tests.js` file. Update `AUTHORITY_URL`, `RESOURCE_URL`, `REDIRECT_URL`, `APP_ID` to values, provided by your Azure AD. For instructions how to setup an Azure AD application see [Setting up an Application in Azure AD section](#setting-up-an-application-in-azure-ad).
-* Build and run application.
-
-## Windows Quirks ##
-Plugin is based on native ADAL v2 as ADAL v3 [does not support Winmd anymore](https://stackoverflow.com/questions/37467211/adal-3-windown-8-1-app-nuget-update-failing#comment62469160_37468708).
-
-### Using ADFS/SSO
-To use ADFS/SSO on Windows platform (Windows Phone 8.1 is not supported for now) add the following preference into `config.xml`:
-`<preference name="adal-use-corporate-network" value="true" />`
-
-`adal-use-corporate-network` is `false` by default.
-
-It will add all needed application capabilities and toggle authContext to support ADFS. You can change its value to `false` and back later, or remove it from `config.xml` - call `cordova prepare` after it to apply the changes.
-
-__Note__: You should not normally use `adal-use-corporate-network` as it adds capabilities, which prevents an app from being published in the Windows Store.
 
 ## Android Quirks ##
 ### Broker support
 The following method should be used to enable broker component support (delivered with Intune's Company portal app). Read [ADAL for Android](https://github.com/AzureAD/azure-activedirectory-library-for-android) to understand broker concept in more details.
 
-```javascript
-Microsoft.ADAL.AuthenticationSettings.setUseBroker(true)
-.then(function() {
-  ...
-```
+`Microsoft.ADAL.AuthenticationSettings.setUseBroker(true);`
 
 __Note__: Developer needs to register special redirectUri for broker usage. RedirectUri is in the format of `msauth://packagename/Base64UrlencodedSignature`
 
@@ -291,6 +272,16 @@ ex: x-msauth-com-microsoft-mytestiosapp://com.microsoft.mytestiosapp
 Read [ADAL for iOS](https://github.com/AzureAD/azure-activedirectory-library-for-objc#brokered-authentication) to understand broker concept in more details.
 
 ## Copyrights ##
+Copyright (c) Northwest Mutual. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use these files except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+-----
+
 Copyright (c) Microsoft Open Technologies, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use these files except in compliance with the License. You may obtain a copy of the License at

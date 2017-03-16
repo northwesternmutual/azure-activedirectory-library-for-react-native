@@ -1,27 +1,23 @@
 /*******************************************************************************
+ * Copyright (c) Northwestern Mutual
+ * All Rights Reserved
+ * Licensed under the Apache License, Version 2.0.
+ * See License.txt in the project root for license information.
+ ******************************************************************************/
+
+/*******************************************************************************
  * Copyright (c) Microsoft Open Technologies, Inc.
  * All Rights Reserved
  * See License in the project root for license information.
  ******************************************************************************/
 
-#import <Foundation/Foundation.h>
-#import <Cordova/CDVPlugin.h>
 
+#import <React/RCTBridgeModule.h>
 #import <ADAL/ADAuthenticationContext.h>
 
-// Implements Apache Cordova plugin for Microsoft Azure ADAL
-@interface CordovaAdalPlugin : CDVPlugin
-
-// AuthenticationContext methods
-- (void)createAsync:(CDVInvokedUrlCommand *)command;
-- (void)acquireTokenAsync:(CDVInvokedUrlCommand *)command;
-- (void)acquireTokenSilentAsync:(CDVInvokedUrlCommand *)command;
-
-// TokenCache methods
-- (void)tokenCacheClear:(CDVInvokedUrlCommand *)command;
-- (void)tokenCacheReadItems:(CDVInvokedUrlCommand *)command;
-- (void)tokenCacheDeleteItem:(CDVInvokedUrlCommand *)command;
+@interface ReactNativeAdalPlugin : NSObject <RCTBridgeModule>
 
 + (ADAuthenticationContext *)getOrCreateAuthContext:(NSString *)authority
                                   validateAuthority:(BOOL)validate;
+
 @end
