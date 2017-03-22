@@ -10,7 +10,8 @@ This library is a fork of the library for Cordova. The code was change into a pl
 
 ## Initial setup
 1. create you application in Azure AD. You will need to set the redriect URI for the application. 
-    1. iOS:  `x-msauth-mytestiosapp://com.myapp.mytestapp`
+    1. iOS:  `x-msauth-<bundleId>://com.myapp.mytestapp`
+        1. example: `x-msauth-org-reactjs-native-example-sample://org.reactjs.native.example.sample`
     1. android: `msauth://packagename/Base64UrlencodedSignature`
         
         You can get your redirecturi for your app using the script brokerRedirectPrint.ps1 on Windows or brokerRedirectPrint.sh on Linux or Mac from the [Android SDK repo](https://github.com/AzureAD/azure-activedirectory-library-for-android). You can also use API call mContext.getBrokerRedirectUri. Signature is related to your signing certificates.
@@ -20,8 +21,8 @@ This library is a fork of the library for Cordova. The code was change into a pl
 
 ### Manually Install iOS
 
-1. Copy src/ios/* to <path to RN app>/ios/<appname>
-1. Open xcdoe to <path to RN app>/ios and include those files in the app.
+1. Copy `src/ios/*` to `<path to RN app>/ios/<appname>`
+1. Open xcdoe to `<path to RN app>/ios` and include those files in the app.
 1. Add the following to the apps .plist files.
 
     ```
@@ -52,14 +53,14 @@ This library is a fork of the library for Cordova. The code was change into a pl
     <string>org.your.package.bundle.name</string>
     ```
 
-1. If dong brokered auth, keychain sharing must be enabled under the Capabilities Settings. Add the keychain group `com.microsoft.adalcache`
+1. Enable keychain sharing under the Capabilities Settings. Add the keychain group `com.microsoft.adalcache`
 
 
 
 ### Manually Install Android
 
 
-1. copy src/android/* to <path to RN app>/android/app/src/java/com/microsoft/add/adal
+1. copy `src/android/*` to `<path to RN app>/android/app/src/main/java/com/microsoft/add/adal`
 1. Add `compile('com.microsoft.aad:adal:1.2.2')` to the `build.gradle (Module: app)` file
 1. Add the following to AndroidManifest.xml
     ```
