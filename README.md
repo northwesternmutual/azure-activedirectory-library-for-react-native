@@ -123,7 +123,7 @@ authenticate(function(authResponse) {
 
 ## Supported platforms
 
-  * Android (OS 4.0.3 and higher)
+  * Android (OS 5.0 and higher)
   * iOS
  
 ## Creating new AuthenticationContext
