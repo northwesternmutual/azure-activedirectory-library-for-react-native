@@ -86,17 +86,6 @@ public class ReactNativeAdalPlugin extends ReactContextBaseJavaModule {
 
 
         reactContext.addActivityEventListener(activityEventListener);
-
-        //Android API < 18 does not support AndroidKeyStore so ADAL requires
-        // some extra work to crete and pass secret key to ADAL.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            try {
-                SecretKey secretKey = this.createSecretKey(SECRET_KEY);
-                AuthenticationSettings.INSTANCE.setSecretKey(secretKey.getEncoded());
-            } catch (Exception e) {
-                Log.w("CordovaAdalPlugin", "Unable to create secret key: " + e.getMessage());
-            }
-        }
     }
 
 
@@ -322,12 +311,5 @@ public class ReactNativeAdalPlugin extends ReactContextBaseJavaModule {
 
         currentContext = result;
         return result;
-    }
-
-    private SecretKey createSecretKey(String key) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
-        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBEWithSHA256And256BitAES-CBC-BC");
-        SecretKey tempkey = keyFactory.generateSecret(new PBEKeySpec(key.toCharArray(), "abcdedfdfd".getBytes("UTF-8"), 100, 256));
-        SecretKey secretKey = new SecretKeySpec(tempkey.getEncoded(), "AES");
-        return secretKey;
     }
 }
