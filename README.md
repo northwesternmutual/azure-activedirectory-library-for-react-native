@@ -273,7 +273,7 @@ ex: x-msauth-com-microsoft-mytestiosapp://com.microsoft.mytestiosapp
 Read [ADAL for iOS](https://github.com/AzureAD/azure-activedirectory-library-for-objc#brokered-authentication) to understand broker concept in more details.
 
 ## Copyrights ##
-Copyright (c) Northwest Mutual. All rights reserved.
+Copyright (c) Northwestern Mutual. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use these files except in compliance with the License. You may obtain a copy of the License at
 
