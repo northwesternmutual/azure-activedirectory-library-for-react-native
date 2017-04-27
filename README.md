@@ -9,7 +9,7 @@ Here you can find the source code for the library.
 This library is a fork of the library for Cordova. The code was change into a plugin to work with React Native. The JavaScript API's were kept virtually the same to keep parity between the two plugins. 
 
 ## Initial setup
-1. create you application in Azure AD. You will need to set the redriect URI for the application. 
+1. create your application in Azure AD. You will need to set the redriect URI for the application. 
     1. iOS:  `x-msauth-<bundleId>://com.myapp.mytestapp`
         1. example: `x-msauth-org-reactjs-native-example-sample://org.reactjs.native.example.sample`
     1. android: `msauth://packagename/Base64UrlencodedSignature`
@@ -22,7 +22,7 @@ This library is a fork of the library for Cordova. The code was change into a pl
 ### Manually Install iOS
 
 1. Copy `src/ios/*` to `<path to RN app>/ios/<appname>`
-1. Open xcdoe to `<path to RN app>/ios` and include those files in the app.
+1. Open xcode to `<path to RN app>/ios` and include those files in the app.
 1. Add the following to the apps .plist files.
 
     ```
