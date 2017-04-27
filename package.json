@@ -1,55 +1,31 @@
 {
-  "name": "cordova-plugin-ms-adal",
-  "version": "0.9.0",
+  "name": "react-native-plugin-ms-adal",
+  "version": "0.10.0",
   "description": "Provides Microsoft Azure Active Directory (ADAL) OAuth client.",
   "cordova": {
-    "id": "cordova-plugin-ms-adal",
+    "id": "react-native-plugin-ms-adal",
     "platforms": [
       "android",
-      "ios",
-      "windows"
+      "ios"
     ]
-  },
-  "engines": {
-    "cordovaDependencies": {
-      "0.8.0": {
-        "cordova-android": ">=4.1.0",
-        "cordova-windows": ">=4.1.0",
-        "cordova": ">=5.4.0"
-      },
-      "0.8.1": {
-        "cordova-android": ">=4.1.0",
-        "cordova-windows": ">=4.1.0",
-        "cordova": ">=5.4.0"
-      },
-      "0.9.0": {
-        "cordova-android": ">=4.1.0",
-        "cordova-windows": ">=4.1.0",
-        "cordova": ">=5.4.0"
-      },
-      "1.0.0": {
-        "cordova": ">=100"
-      }
-    }
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AzureAD/azure-activedirectory-library-for-cordova.git"
+    "url": "git+https://github.com/northwesternmutual/azure-activedirectory-library-for-react-native.git"
   },
   "keywords": [
     "microsoft",
     "azure",
     "adal",
     "activedirectory",
-    "ecosystem:cordova",
-    "cordova-android",
-    "cordova-ios",
-    "cordova-windows"
+    "ecosystem:react-native",
+    "react-native-android",
+    "react-native-ios"
   ],
-  "author": "MSOpenTech",
+  "author": "MSOpenTech & Northwestern Mutual",
   "license": "Apache 2.0",
   "bugs": {
-    "url": "https://github.com/AzureAD/azure-activedirectory-library-for-cordova/issues"
+    "url": "https://github.com/northwesternmutual/azure-activedirectory-library-for-react-native/issues"
   },
-  "homepage": "https://github.com/AzureAD/azure-activedirectory-library-for-cordova#readme"
+  "homepage": "https://github.com/northwesternmutual/azure-activedirectory-library-for-react-native#readme"
 }

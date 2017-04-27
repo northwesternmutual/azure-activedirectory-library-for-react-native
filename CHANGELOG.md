@@ -1,3 +1,6 @@
+0.1.0 - March 8, 2017
+* Forked Cordova ADAL plugin and updated for use with React Native
+
 0.9.0 - February 8, 2017
 * Use alternative sources to populate 'userInfo' in case if 'idToken' is not defined
 * Make AuthenticationSettings.setUseBroker available across platforms
